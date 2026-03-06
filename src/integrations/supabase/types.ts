@@ -55,6 +55,36 @@ export type Database = {
           },
         ]
       }
+      family_members: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notify_on_missed: boolean
+          phone_number: string
+          relationship: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notify_on_missed?: boolean
+          phone_number: string
+          relationship: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notify_on_missed?: boolean
+          phone_number?: string
+          relationship?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medicines: {
         Row: {
           created_at: string
