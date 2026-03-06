@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { useMedicines } from "@/hooks/useMedicines";
 import { useTodayDoses, useMarkDose, useCreateTodayDoses } from "@/hooks/useDoseLogs";
 import { useCompliance } from "@/hooks/useCompliance";
-import { Pill, CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ShieldCheck, CalendarDays, Activity } from "lucide-react";
+import { Pill, CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ShieldCheck, CalendarDays, Activity, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -250,5 +250,3 @@ export default function Dashboard() {
 function BarChart3Icon(props: any) {
   return <BarChart3 {...props} />;
 }
-
-import { BarChart3 } from "lucide-react";
