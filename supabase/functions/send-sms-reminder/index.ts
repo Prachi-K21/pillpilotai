@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const userIds = [...new Set((medicines || []).map((m: any) => m.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, phone_number, name, timezone")
+      .select("user_id, phone_number, name, timezone, sms_reminders_enabled")
       .in("user_id", userIds);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
