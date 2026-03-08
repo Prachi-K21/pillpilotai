@@ -1,20 +1,61 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Pill, BarChart3 } from "lucide-react";
+import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Pill, BarChart3, Stethoscope, UserCog, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { roles } = useAuth();
+  const qc = useQueryClient();
 
   if (!roles.includes("admin")) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Fetch all users with their roles
+  const { data: users } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const { data: profiles } = await supabase.from("profiles").select("user_id, name, phone_number");
+      const { data: allRoles } = await supabase.from("user_roles").select("user_id, role");
+
+      const roleMap: Record<string, string[]> = {};
+      (allRoles || []).forEach((r) => {
+        if (!roleMap[r.user_id]) roleMap[r.user_id] = [];
+        roleMap[r.user_id].push(r.role);
+      });
+
+      return (profiles || []).map((p) => ({
+        ...p,
+        roles: roleMap[p.user_id] || ["patient"],
+      }));
+    },
+  });
+
+  const addDoctorRole = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "doctor" as any });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Doctor role assigned!"); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const removeDoctorRole = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "doctor" as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Doctor role removed!"); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
@@ -144,6 +185,53 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         </div>
+
+        {/* User Management */}
+        <Card className="glass-card animate-fade-in">
+          <CardHeader>
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <UserCog className="h-5 w-5 text-primary" />
+              User Management
+            </CardTitle>
+            <CardDescription>Assign or remove the Doctor role for users</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!users || users.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No users found</p>
+            ) : (
+              <div className="space-y-2">
+                {users.map((u) => {
+                  const isDoctor = u.roles.includes("doctor");
+                  return (
+                    <div key={u.user_id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/40">
+                      <div>
+                        <p className="font-medium">{u.name || "Unnamed"}</p>
+                        <p className="text-xs text-muted-foreground">{u.phone_number || "No phone"}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {u.roles.map((r: string) => (
+                          <Badge key={r} variant={r === "doctor" ? "default" : r === "admin" ? "destructive" : "secondary"} className="text-xs">
+                            {r === "doctor" && <Stethoscope className="h-3 w-3 mr-1" />}
+                            {r}
+                          </Badge>
+                        ))}
+                        {isDoctor ? (
+                          <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => removeDoctorRole.mutate(u.user_id)} disabled={removeDoctorRole.isPending}>
+                            <Trash2 className="h-3.5 w-3.5" /> Remove Doctor
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => addDoctorRole.mutate(u.user_id)} disabled={addDoctorRole.isPending}>
+                            <Plus className="h-3.5 w-3.5" /> Make Doctor
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
