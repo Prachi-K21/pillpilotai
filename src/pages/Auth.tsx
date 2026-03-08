@@ -16,6 +16,7 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
+  const [signupTimezone, setSignupTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ export default function Auth() {
     }
     setLoading(true);
     try {
-      await signUp(signupEmail, signupPassword, signupName, signupPhone);
+      await signUp(signupEmail, signupPassword, signupName, signupPhone, signupTimezone);
       toast.success("Account created! You can now sign in.");
       navigate("/dashboard");
     } catch (err: any) {
@@ -159,6 +160,28 @@ export default function Auth() {
                     <div className="space-y-1.5">
                       <Label htmlFor="signup-password" className="text-xs font-medium">Password</Label>
                       <Input id="signup-password" type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} minLength={6} required className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-timezone" className="text-xs font-medium">Timezone</Label>
+                      <select
+                        id="signup-timezone"
+                        value={signupTimezone}
+                        onChange={(e) => setSignupTimezone(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {[
+                          "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Asia/Shanghai",
+                          "Asia/Hong_Kong", "Asia/Karachi", "Asia/Dhaka", "Asia/Jakarta",
+                          "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+                          "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+                          "America/Toronto", "America/Sao_Paulo", "America/Mexico_City",
+                          "Africa/Cairo", "Africa/Lagos", "Africa/Johannesburg",
+                          "Australia/Sydney", "Australia/Melbourne", "Pacific/Auckland",
+                          "UTC",
+                        ].map((tz) => (
+                          <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+                        ))}
+                      </select>
                     </div>
                     <Button type="submit" className="w-full h-10 gap-2" disabled={loading}>
                       {loading ? "Creating account..." : <>Create Account <ArrowRight className="h-4 w-4" /></>}

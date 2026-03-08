@@ -20,10 +20,9 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json().catch(() => ({}));
-    const mode = body.mode || "scheduled"; // "scheduled" | "missed" | "manual"
+    const mode = body.mode || "scheduled";
 
     if (mode === "manual") {
-      // Send a single SMS
       const { to, message } = body;
       if (!to || !message) {
         return new Response(JSON.stringify({ error: "Missing 'to' or 'message'" }), {
@@ -37,33 +36,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Scheduled mode: find upcoming doses and send reminders
-    const now = new Date();
-    const today = now.toISOString().split("T")[0];
-    const currentHour = now.getUTCHours().toString().padStart(2, "0");
-    const currentMinute = now.getUTCMinutes();
-    // Match doses within the current hour window
-    const timePrefix = `${currentHour}:`;
+    const nowUtc = new Date();
+    const today = nowUtc.toISOString().split("T")[0];
 
-    // Get all medicines with intake times matching current hour
+    // Get all medicines with their user's profile (including timezone)
     const { data: medicines, error: medError } = await supabase
       .from("medicines")
       .select("id, medicine_name, dosage, intake_times, user_id, start_date, end_date");
 
     if (medError) throw medError;
 
+    // Get all profiles with timezone info
+    const userIds = [...new Set((medicines || []).map((m: any) => m.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, phone_number, name, timezone")
+      .in("user_id", userIds);
+
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+
     let sentCount = 0;
 
     for (const med of medicines || []) {
-      // Check if medicine is active today
       if (med.start_date > today) continue;
       if (med.end_date && med.end_date < today) continue;
+
+      const profile = profileMap.get(med.user_id);
+      if (!profile?.phone_number) continue;
+
+      const userTimezone = profile.timezone || "Asia/Kolkata";
+
+      // Get current time in the user's timezone
+      const userNow = new Date(nowUtc.toLocaleString("en-US", { timeZone: userTimezone }));
+      const userHour = userNow.getHours().toString().padStart(2, "0");
+      const userMinute = userNow.getMinutes();
+      const timePrefix = `${userHour}:`;
 
       for (const time of med.intake_times || []) {
         if (!time.startsWith(timePrefix)) continue;
 
         const timeMinute = parseInt(time.split(":")[1] || "0");
-        if (Math.abs(timeMinute - currentMinute) > 5) continue;
+        if (Math.abs(timeMinute - userMinute) > 5) continue;
 
         // Check if dose already logged
         const { data: existing } = await supabase
@@ -77,20 +90,10 @@ Deno.serve(async (req) => {
 
         if (existing) continue;
 
-        // Get user phone
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("phone_number, name")
-          .eq("user_id", med.user_id)
-          .single();
-
-        if (!profile?.phone_number) continue;
-
         const message = `💊 MedTrack Reminder: Hi ${profile.name || "there"}, it's time to take ${med.medicine_name} (${med.dosage}) at ${time}. Stay healthy!`;
 
         await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, profile.phone_number, message);
 
-        // Create notification record
         await supabase.from("notifications").insert({
           user_id: med.user_id,
           medicine_id: med.id,
@@ -102,49 +105,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Missed dose alerts: check for doses not taken in the last 2 hours
+    // Missed dose alerts
     if (mode === "scheduled" || mode === "missed") {
-      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-      const missedHour = twoHoursAgo.getUTCHours().toString().padStart(2, "0");
+      for (const med of medicines || []) {
+        if (med.start_date > today) continue;
+        if (med.end_date && med.end_date < today) continue;
 
-      const { data: missedLogs } = await supabase
-        .from("dose_logs")
-        .select("*, medicines(medicine_name, dosage)")
-        .eq("scheduled_date", today)
-        .eq("status", "pending")
-        .like("scheduled_time", `${missedHour}:%`);
+        const profile = profileMap.get(med.user_id);
+        if (!profile) continue;
 
-      for (const log of missedLogs || []) {
-        // Notify family members
-        const { data: familyMembers } = await supabase
-          .from("family_members")
-          .select("phone_number, name")
-          .eq("user_id", log.user_id)
-          .eq("notify_on_missed", true);
+        const userTimezone = profile.timezone || "Asia/Kolkata";
+        const userNow = new Date(nowUtc.toLocaleString("en-US", { timeZone: userTimezone }));
+        const userHour = userNow.getHours();
+        const userMinute = userNow.getMinutes();
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name")
-          .eq("user_id", log.user_id)
-          .single();
+        for (const time of med.intake_times || []) {
+          const [h, m] = time.split(":").map(Number);
+          const timeTotalMin = h * 60 + m;
+          const nowTotalMin = userHour * 60 + userMinute;
+          const diffMin = nowTotalMin - timeTotalMin;
 
-        const medName = (log as any).medicines?.medicine_name || "their medicine";
+          // Check if dose is 2 hours overdue (in user's local time)
+          if (diffMin < 120 || diffMin > 125) continue;
 
-        for (const member of familyMembers || []) {
-          const alertMsg = `⚠️ MedTrack Alert: ${profile?.name || "Your family member"} missed their dose of ${medName} scheduled at ${log.scheduled_time}. Please check on them.`;
-          await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, member.phone_number, alertMsg);
-          sentCount++;
+          const { data: log } = await supabase
+            .from("dose_logs")
+            .select("id, status")
+            .eq("medicine_id", med.id)
+            .eq("user_id", med.user_id)
+            .eq("scheduled_date", today)
+            .eq("scheduled_time", time)
+            .single();
+
+          if (!log || log.status !== "pending") continue;
+
+          // Notify family members
+          const { data: familyMembers } = await supabase
+            .from("family_members")
+            .select("phone_number, name")
+            .eq("user_id", med.user_id)
+            .eq("notify_on_missed", true);
+
+          for (const member of familyMembers || []) {
+            const alertMsg = `⚠️ MedTrack Alert: ${profile.name || "Your family member"} missed their dose of ${med.medicine_name} scheduled at ${time}. Please check on them.`;
+            await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, member.phone_number, alertMsg);
+            sentCount++;
+          }
+
+          // Update status to missed
+          await supabase.from("dose_logs").update({ status: "missed" }).eq("id", log.id);
         }
-
-        // Update status to missed
-        await supabase.from("dose_logs").update({ status: "missed" }).eq("id", log.id);
       }
     }
+
+    console.log(`SMS run complete. Sent: ${sentCount}, UTC: ${nowUtc.toISOString()}`);
 
     return new Response(JSON.stringify({ success: true, sentCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("SMS error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
