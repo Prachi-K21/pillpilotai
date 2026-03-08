@@ -4,7 +4,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   Pill, LayoutDashboard, PlusCircle, ClipboardList, BarChart3,
   Bell, FileText, Stethoscope, LogOut, User, CalendarDays,
-  Users, Moon, Sun, ShieldCheck
+  Users, Moon, Sun, ShieldCheck, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ const patientLinks = [
   { to: "/family", icon: Users, label: "Family Alerts" },
   { to: "/notifications", icon: Bell, label: "Notifications" },
   { to: "/reports", icon: FileText, label: "Reports" },
+  { to: "/install", icon: Download, label: "Install App" },
 ];
 
 const doctorLinks = [
