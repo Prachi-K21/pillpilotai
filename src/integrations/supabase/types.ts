@@ -38,6 +38,30 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_notes: {
+        Row: {
+          created_at: string
+          doctor_user_id: string | null
+          id: string
+          note: string
+          patient_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_user_id?: string | null
+          id?: string
+          note: string
+          patient_user_id: string
+        }
+        Update: {
+          created_at?: string
+          doctor_user_id?: string | null
+          id?: string
+          note?: string
+          patient_user_id?: string
+        }
+        Relationships: []
+      }
       dose_logs: {
         Row: {
           created_at: string
@@ -78,6 +102,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      family_doctors: {
+        Row: {
+          clinic_name: string | null
+          created_at: string
+          doctor_name: string
+          email: string | null
+          id: string
+          phone_number: string | null
+          specialty: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clinic_name?: string | null
+          created_at?: string
+          doctor_name: string
+          email?: string | null
+          id?: string
+          phone_number?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clinic_name?: string | null
+          created_at?: string
+          doctor_name?: string
+          email?: string | null
+          id?: string
+          phone_number?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       family_members: {
         Row: {
