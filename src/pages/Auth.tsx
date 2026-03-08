@@ -43,7 +43,7 @@ export default function Auth() {
     }
     setLoading(true);
     try {
-      await signUp(signupEmail, signupPassword, signupName, signupPhone);
+      await signUp(signupEmail, signupPassword, signupName, signupPhone, signupTimezone);
       toast.success("Account created! You can now sign in.");
       navigate("/dashboard");
     } catch (err: any) {
