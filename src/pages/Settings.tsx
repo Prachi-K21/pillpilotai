@@ -72,11 +72,12 @@ export default function Settings() {
   });
 
   return (
-    <DashboardLayout
-      title="Settings"
-      description="Manage your notification preferences and profile"
-    >
+    <DashboardLayout>
       <div className="max-w-2xl mx-auto space-y-6">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground">Manage your notification preferences and profile</p>
+        </div>
         {/* Profile Settings */}
         <Card>
           <CardHeader>
