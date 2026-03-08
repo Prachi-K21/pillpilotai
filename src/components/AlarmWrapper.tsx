@@ -4,15 +4,10 @@ import MedicineAlarmDialog from "./MedicineAlarmDialog";
 
 export default function AlarmWrapper() {
   const { user } = useAuth();
-  
-  if (!user) return null;
-  
-  return <AlarmActive />;
-}
-
-function AlarmActive() {
   const { activeAlarms, dismissAlarm, dismissAll } = useMedicineAlarm();
-  
+
+  if (!user) return null;
+
   return (
     <MedicineAlarmDialog
       alarms={activeAlarms}
