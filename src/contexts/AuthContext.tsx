@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  profile: { name: string; phone_number: string | null } | null;
+  profile: { name: string; phone_number: string | null; timezone: string } | null;
   roles: AppRole[];
   signUp: (email: string, password: string, name: string, phone: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -22,11 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ name: string; phone_number: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ name: string; phone_number: string | null; timezone: string } | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.from("profiles").select("name, phone_number").eq("user_id", userId).single();
+    const { data } = await supabase.from("profiles").select("name, phone_number, timezone").eq("user_id", userId).single();
     if (data) setProfile(data);
   };
 
