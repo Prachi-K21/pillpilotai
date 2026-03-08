@@ -57,7 +57,7 @@ export default function AppSidebar() {
             <Pill className="h-5 w-5 text-sidebar-primary" />
           </div>
           <div>
-            <span className="text-base font-display font-bold text-sidebar-foreground">MedTrack AI</span>
+            <span className="text-base font-display font-bold text-sidebar-foreground">PillPilot</span>
             <p className="text-[10px] text-sidebar-foreground/50 font-medium tracking-wider uppercase">Smart Compliance</p>
           </div>
         </div>

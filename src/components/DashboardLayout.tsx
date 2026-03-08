@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="p-4 rounded-2xl gradient-primary">
             <Pill className="h-8 w-8 text-primary-foreground animate-pulse" />
           </div>
-          <span className="text-lg font-display font-semibold text-muted-foreground">Loading MedTrack...</span>
+          <span className="text-lg font-display font-semibold text-muted-foreground">Loading PillPilot...</span>
         </div>
       </div>
     );

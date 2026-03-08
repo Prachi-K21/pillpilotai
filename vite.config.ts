@@ -23,9 +23,9 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       manifest: {
-        name: "MedTrack AI - Smart Medicine Tracker",
-        short_name: "MedTrack",
-        description: "Smart medication compliance tracker with reminders and analytics",
+        name: "PillPilot - Smart Medicine Reminder",
+        short_name: "PillPilot",
+        description: "Smart AI-powered medicine reminder that alerts you to take medications on time",
         theme_color: "#14b8a6",
         background_color: "#0f172a",
         display: "standalone",
