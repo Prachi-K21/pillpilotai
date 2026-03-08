@@ -281,7 +281,7 @@ export default function AIChatBot() {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
+          <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
             <div className="space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-8 space-y-4">
@@ -340,7 +340,7 @@ export default function AIChatBot() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Disclaimer */}
           <div className="px-4 py-1.5 text-[10px] text-muted-foreground text-center border-t border-border bg-muted/30 shrink-0">
