@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bell, X, Pill } from "lucide-react";
+import { Bell, X, Pill, Clock } from "lucide-react";
 
 interface AlarmItem {
   id: string;
@@ -13,9 +13,10 @@ interface MedicineAlarmDialogProps {
   alarms: AlarmItem[];
   onDismiss: (id: string) => void;
   onDismissAll: () => void;
+  onSnooze?: (id: string) => void;
 }
 
-export default function MedicineAlarmDialog({ alarms, onDismiss, onDismissAll }: MedicineAlarmDialogProps) {
+export default function MedicineAlarmDialog({ alarms, onDismiss, onDismissAll, onSnooze }: MedicineAlarmDialogProps) {
   if (alarms.length === 0) return null;
 
   return (
@@ -46,14 +47,27 @@ export default function MedicineAlarmDialog({ alarms, onDismiss, onDismissAll }:
                   </p>
                 </div>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => onDismiss(alarm.id)}
-                className="shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1 shrink-0">
+                {onSnooze && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onSnooze(alarm.id)}
+                    className="text-muted-foreground hover:text-primary"
+                    title="Snooze 5 min"
+                  >
+                    <Clock className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onDismiss(alarm.id)}
+                  className="shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>

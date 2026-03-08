@@ -2,3 +2,9 @@ project_id = "qpkeekpiniakgnjoeosk"
 
 [functions.send-sms-reminder]
 verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.check-interactions]
+verify_jwt = false

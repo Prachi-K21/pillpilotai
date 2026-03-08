@@ -20,6 +20,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import AlarmWrapper from "./components/AlarmWrapper";
+import AIChatBot from "./components/AIChatBot";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AlarmWrapper />
+            <AIChatBot />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/auth" element={<Auth />} />

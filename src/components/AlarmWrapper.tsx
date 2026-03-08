@@ -4,7 +4,7 @@ import MedicineAlarmDialog from "./MedicineAlarmDialog";
 
 export default function AlarmWrapper() {
   const { user } = useAuth();
-  const { activeAlarms, dismissAlarm, dismissAll } = useMedicineAlarm();
+  const { activeAlarms, dismissAlarm, dismissAll, snoozeAlarm } = useMedicineAlarm();
 
   if (!user) return null;
 
@@ -13,6 +13,7 @@ export default function AlarmWrapper() {
       alarms={activeAlarms}
       onDismiss={dismissAlarm}
       onDismissAll={dismissAll}
+      onSnooze={snoozeAlarm}
     />
   );
 }
