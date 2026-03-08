@@ -1,13 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Pill, BarChart3 } from "lucide-react";
+import { Users, TrendingUp, AlertTriangle, ShieldCheck, Activity, Pill, BarChart3, Stethoscope, UserCog, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { roles } = useAuth();
