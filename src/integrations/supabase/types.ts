@@ -192,6 +192,7 @@ export type Database = {
           id: string
           name: string
           phone_number: string | null
+          sms_reminders_enabled: boolean
           timezone: string
           updated_at: string
           user_id: string
@@ -201,6 +202,7 @@ export type Database = {
           id?: string
           name?: string
           phone_number?: string | null
+          sms_reminders_enabled?: boolean
           timezone?: string
           updated_at?: string
           user_id: string
@@ -210,6 +212,7 @@ export type Database = {
           id?: string
           name?: string
           phone_number?: string | null
+          sms_reminders_enabled?: boolean
           timezone?: string
           updated_at?: string
           user_id?: string

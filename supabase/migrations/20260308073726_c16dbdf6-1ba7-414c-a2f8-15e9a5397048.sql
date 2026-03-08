@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN sms_reminders_enabled boolean NOT NULL DEFAULT true;
