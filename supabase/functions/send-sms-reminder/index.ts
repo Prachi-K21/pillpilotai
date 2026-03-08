@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
 
       const profile = profileMap.get(med.user_id);
       if (!profile?.phone_number) continue;
+      if (profile.sms_reminders_enabled === false) continue;
 
       const userTimezone = profile.timezone || "Asia/Kolkata";
 
