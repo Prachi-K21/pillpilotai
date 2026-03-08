@@ -125,8 +125,8 @@ Deno.serve(async (req) => {
           const nowTotalMin = userHour * 60 + userMinute;
           const diffMin = nowTotalMin - timeTotalMin;
 
-          // Check if dose is 2 hours overdue (in user's local time)
-          if (diffMin < 120 || diffMin > 125) continue;
+          // Check if dose is 30+ minutes overdue (in user's local time)
+          if (diffMin < 30 || diffMin > 180) continue;
 
           const { data: log } = await supabase
             .from("dose_logs")
@@ -137,7 +137,21 @@ Deno.serve(async (req) => {
             .eq("scheduled_time", time)
             .single();
 
-          if (!log || log.status !== "pending") continue;
+          // Alert if dose is pending or already missed (but not taken)
+          if (!log || log.status === "taken") continue;
+
+          // Check if we already sent a family alert for this dose today
+          const alertKey = `family-alert-${med.id}-${time}-${today}`;
+          const { data: existingAlert } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", med.user_id)
+            .eq("type", "missed_alert")
+            .like("message", `%${med.medicine_name}%${time}%`)
+            .gte("sent_at", `${today}T00:00:00`)
+            .limit(1);
+
+          if (existingAlert && existingAlert.length > 0) continue;
 
           // Notify family members
           const { data: familyMembers } = await supabase
@@ -147,13 +161,33 @@ Deno.serve(async (req) => {
             .eq("notify_on_missed", true);
 
           for (const member of familyMembers || []) {
+            // Normalize phone number to E.164 format
+            let phone = member.phone_number.replace(/\s+/g, "");
+            if (!phone.startsWith("+")) {
+              phone = phone.length === 10 ? `+91${phone}` : `+${phone}`;
+            }
+            
             const alertMsg = `⚠️ PillPilot Alert: ${profile.name || "Your family member"} missed their dose of ${med.medicine_name} scheduled at ${time}. Please check on them.`;
-            await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, member.phone_number, alertMsg);
-            sentCount++;
+            try {
+              await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, phone, alertMsg);
+              sentCount++;
+            } catch (smsErr) {
+              console.error(`Failed to send SMS to ${phone}:`, smsErr.message);
+            }
           }
 
-          // Update status to missed
-          await supabase.from("dose_logs").update({ status: "missed" }).eq("id", log.id);
+          // Record the alert notification
+          await supabase.from("notifications").insert({
+            user_id: med.user_id,
+            medicine_id: med.id,
+            type: "missed_alert",
+            message: `Family alert sent for missed ${med.medicine_name} at ${time}`,
+          });
+
+          // Update status to missed if still pending
+          if (log.status === "pending") {
+            await supabase.from("dose_logs").update({ status: "missed" }).eq("id", log.id);
+          }
         }
       }
     }
