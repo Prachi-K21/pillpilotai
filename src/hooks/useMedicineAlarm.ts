@@ -78,8 +78,7 @@ export function useMedicineAlarm() {
         icon: "/pwa-icon-192.png",
         tag: alarm.id,
         requireInteraction: true,
-        vibrate: [200, 100, 200, 100, 200],
-      });
+      } as NotificationOptions);
     }
   }, [playAlarmSound]);
 
