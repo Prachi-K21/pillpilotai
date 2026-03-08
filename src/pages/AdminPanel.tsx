@@ -185,6 +185,53 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         </div>
+
+        {/* User Management */}
+        <Card className="glass-card animate-fade-in">
+          <CardHeader>
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <UserCog className="h-5 w-5 text-primary" />
+              User Management
+            </CardTitle>
+            <CardDescription>Assign or remove the Doctor role for users</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!users || users.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No users found</p>
+            ) : (
+              <div className="space-y-2">
+                {users.map((u) => {
+                  const isDoctor = u.roles.includes("doctor");
+                  return (
+                    <div key={u.user_id} className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/40">
+                      <div>
+                        <p className="font-medium">{u.name || "Unnamed"}</p>
+                        <p className="text-xs text-muted-foreground">{u.phone_number || "No phone"}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {u.roles.map((r: string) => (
+                          <Badge key={r} variant={r === "doctor" ? "default" : r === "admin" ? "destructive" : "secondary"} className="text-xs">
+                            {r === "doctor" && <Stethoscope className="h-3 w-3 mr-1" />}
+                            {r}
+                          </Badge>
+                        ))}
+                        {isDoctor ? (
+                          <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => removeDoctorRole.mutate(u.user_id)} disabled={removeDoctorRole.isPending}>
+                            <Trash2 className="h-3.5 w-3.5" /> Remove Doctor
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => addDoctorRole.mutate(u.user_id)} disabled={addDoctorRole.isPending}>
+                            <Plus className="h-3.5 w-3.5" /> Make Doctor
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
