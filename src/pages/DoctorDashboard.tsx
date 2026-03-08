@@ -1,15 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Users, TrendingUp, AlertTriangle, ShieldCheck, MessageSquare, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function DoctorDashboard() {
-  const { roles } = useAuth();
+  const { roles, user } = useAuth();
+  const qc = useQueryClient();
+  const [noteText, setNoteText] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
 
   if (!roles.includes("doctor") && !roles.includes("admin")) {
     return <Navigate to="/dashboard" replace />;
@@ -18,13 +26,11 @@ export default function DoctorDashboard() {
   const { data: patients } = useQuery({
     queryKey: ["doctor-patients"],
     queryFn: async () => {
-      // Get all profiles (doctors can view via RLS)
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("user_id, name, phone_number");
       if (error) throw error;
 
-      // For each patient, get their dose logs
       const patientsWithCompliance = await Promise.all(
         (profiles || []).map(async (p) => {
           const fiveDaysAgo = new Date();
@@ -51,6 +57,26 @@ export default function DoctorDashboard() {
 
       return patientsWithCompliance;
     },
+  });
+
+  const sendNote = useMutation({
+    mutationFn: async () => {
+      if (!selectedPatient || !noteText.trim()) throw new Error("Select a patient and enter a note");
+      const { error } = await supabase
+        .from("doctor_notes" as any)
+        .insert({
+          patient_user_id: selectedPatient,
+          doctor_user_id: user!.id,
+          note: noteText.trim(),
+        } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Note sent to patient!");
+      setNoteText("");
+      setSelectedPatient(null);
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const riskConfig = {
@@ -112,7 +138,7 @@ export default function DoctorDashboard() {
                         <p className="font-medium">{p.name || "Unnamed Patient"}</p>
                         <p className="text-xs text-muted-foreground">{p.phone_number || "No phone"}</p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className="text-sm font-bold">{p.compliance}%</p>
                           <p className="text-xs text-muted-foreground">compliance</p>
@@ -121,6 +147,34 @@ export default function DoctorDashboard() {
                           <r.icon className="h-3 w-3 mr-1" />
                           {p.risk}
                         </Badge>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedPatient(p.user_id)} className="h-8 w-8">
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Send Note to {p.name || "Patient"}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <Textarea
+                                placeholder="Enter your advice or recommendation..."
+                                value={selectedPatient === p.user_id ? noteText : ""}
+                                onChange={(e) => { setSelectedPatient(p.user_id); setNoteText(e.target.value); }}
+                                rows={4}
+                              />
+                              <Button
+                                onClick={() => sendNote.mutate()}
+                                disabled={sendNote.isPending}
+                                className="w-full gap-2"
+                              >
+                                <Send className="h-4 w-4" />
+                                {sendNote.isPending ? "Sending..." : "Send Note"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   );
