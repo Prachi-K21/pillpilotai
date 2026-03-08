@@ -169,7 +169,16 @@ export default function Auth() {
                         onChange={(e) => setSignupTimezone(e.target.value)}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        {Intl.supportedValuesOf("timeZone").map((tz) => (
+                        {[
+                          "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Asia/Shanghai",
+                          "Asia/Hong_Kong", "Asia/Karachi", "Asia/Dhaka", "Asia/Jakarta",
+                          "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+                          "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+                          "America/Toronto", "America/Sao_Paulo", "America/Mexico_City",
+                          "Africa/Cairo", "Africa/Lagos", "Africa/Johannesburg",
+                          "Australia/Sydney", "Australia/Melbourne", "Pacific/Auckland",
+                          "UTC",
+                        ].map((tz) => (
                           <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
                         ))}
                       </select>
