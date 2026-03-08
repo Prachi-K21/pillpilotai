@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const userIds = [...new Set((medicines || []).map((m: any) => m.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, phone_number, name, timezone")
+      .select("user_id, phone_number, name, timezone, sms_reminders_enabled")
       .in("user_id", userIds);
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
 
       const profile = profileMap.get(med.user_id);
       if (!profile?.phone_number) continue;
+      if (profile.sms_reminders_enabled === false) continue;
 
       const userTimezone = profile.timezone || "Asia/Kolkata";
 
@@ -102,6 +103,69 @@ Deno.serve(async (req) => {
         });
 
         sentCount++;
+      }
+    }
+
+    // 15-minute auto-SMS for unmarked doses
+    for (const med of medicines || []) {
+      if (med.start_date > today) continue;
+      if (med.end_date && med.end_date < today) continue;
+
+      const profile = profileMap.get(med.user_id);
+      if (!profile?.phone_number) continue;
+      if (profile.sms_reminders_enabled === false) continue;
+
+      const userTimezone = profile.timezone || "Asia/Kolkata";
+      const userNow = new Date(nowUtc.toLocaleString("en-US", { timeZone: userTimezone }));
+      const userHour = userNow.getHours();
+      const userMinute = userNow.getMinutes();
+
+      for (const time of med.intake_times || []) {
+        const [h, m] = time.split(":").map(Number);
+        const diffMin = (userHour * 60 + userMinute) - (h * 60 + m);
+
+        // Send SMS if dose is 15-29 minutes overdue
+        if (diffMin < 15 || diffMin > 29) continue;
+
+        const { data: log } = await supabase
+          .from("dose_logs")
+          .select("id, status")
+          .eq("medicine_id", med.id)
+          .eq("user_id", med.user_id)
+          .eq("scheduled_date", today)
+          .eq("scheduled_time", time)
+          .single();
+
+        // Only send if dose is still pending (not taken or already missed)
+        if (!log || log.status !== "pending") continue;
+
+        // Check if we already sent a 15-min reminder
+        const { data: existingReminder } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("user_id", med.user_id)
+          .eq("type", "auto_sms_15min")
+          .like("message", `%${med.medicine_name}%${time}%`)
+          .gte("sent_at", `${today}T00:00:00`)
+          .limit(1);
+
+        if (existingReminder && existingReminder.length > 0) continue;
+
+        const message = `⏰ PillPilot: You haven't taken ${med.medicine_name} (${med.dosage}) scheduled at ${time}. Please take it now or mark it in the app.`;
+
+        try {
+          await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, profile.phone_number, message);
+          sentCount++;
+        } catch (smsErr) {
+          console.error(`Failed 15-min SMS to ${profile.phone_number}:`, smsErr.message);
+        }
+
+        await supabase.from("notifications").insert({
+          user_id: med.user_id,
+          medicine_id: med.id,
+          type: "auto_sms_15min",
+          message: `Auto SMS sent for ${med.medicine_name} at ${time} (15 min overdue)`,
+        });
       }
     }
 
