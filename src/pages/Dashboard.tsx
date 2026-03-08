@@ -7,17 +7,51 @@ import { Progress } from "@/components/ui/progress";
 import { useMedicines } from "@/hooks/useMedicines";
 import { useTodayDoses, useMarkDose, useCreateTodayDoses } from "@/hooks/useDoseLogs";
 import { useCompliance } from "@/hooks/useCompliance";
-import { Pill, CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ShieldCheck, CalendarDays, Activity, BarChart3 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Pill, CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ShieldCheck, CalendarDays, Activity, BarChart3, Stethoscope, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: medicines } = useMedicines();
   const { data: todayDoses } = useTodayDoses();
   const { data: compliance } = useCompliance(7);
   const markDose = useMarkDose();
   const createTodayDoses = useCreateTodayDoses();
+
+  // Doctor advice notes
+  const { data: doctorNotes } = useQuery({
+    queryKey: ["doctor_notes_dashboard", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctor_notes" as any)
+        .select("*")
+        .eq("patient_user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+
+      const doctorIds = [...new Set((data || []).map((n: any) => n.doctor_user_id).filter(Boolean))];
+      let nameMap: Record<string, string> = {};
+      if (doctorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, name")
+          .in("user_id", doctorIds);
+        (profiles || []).forEach((p) => { nameMap[p.user_id] = p.name; });
+      }
+
+      return (data || []).map((n: any) => ({
+        ...n,
+        doctor_name: nameMap[n.doctor_user_id] || "Your Doctor",
+      }));
+    },
+    enabled: !!user,
+  });
 
   useEffect(() => {
     if (medicines && medicines.length > 0) {
@@ -242,6 +276,38 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Doctor Advice Section */}
+        {doctorNotes && doctorNotes.length > 0 && (
+          <Card className="glass-card animate-fade-in" style={{ animationDelay: "400ms" }}>
+            <CardHeader className="pb-3">
+              <CardTitle className="font-display text-lg flex items-center gap-2">
+                <Stethoscope className="h-5 w-5 text-primary" />
+                Doctor Advice
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {doctorNotes.map((note: any) => (
+                  <div key={note.id} className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                    <div className="p-2 rounded-full bg-primary/10 mt-0.5">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-semibold">Dr. {note.doctor_name}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(note.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/80 leading-relaxed">{note.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
