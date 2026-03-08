@@ -4,10 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +16,7 @@ import { toast } from "sonner";
 import {
   Stethoscope, UserPlus, Phone, Mail, Building2, Save,
   Trash2, FileText, Download, Share2, AlertTriangle,
-  MessageSquare, Calendar, TrendingUp, Shield, Heart
+  MessageSquare, Calendar, TrendingUp, Shield, Heart, Clock
 } from "lucide-react";
 
 export default function FamilyDoctor() {
@@ -107,7 +105,7 @@ export default function FamilyDoctor() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Doctor notes
+  // Doctor notes with doctor name
   const { data: notes } = useQuery({
     queryKey: ["doctor_notes", user?.id],
     queryFn: async () => {
@@ -117,20 +115,33 @@ export default function FamilyDoctor() {
         .eq("patient_user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as any[];
+
+      // Fetch doctor names
+      const doctorIds = [...new Set((data || []).map((n: any) => n.doctor_user_id).filter(Boolean))];
+      let nameMap: Record<string, string> = {};
+      if (doctorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, name")
+          .in("user_id", doctorIds);
+        (profiles || []).forEach((p) => { nameMap[p.user_id] = p.name; });
+      }
+
+      return (data || []).map((n: any) => ({
+        ...n,
+        doctor_name: nameMap[n.doctor_user_id] || "Your Doctor",
+      }));
     },
     enabled: !!user,
   });
 
-  // Missed doses stats
   const missedLogs = logs?.filter((l: any) => l.status === "missed") || [];
   const recentMissedCount = missedLogs.length;
   const isEmergencyRisk = recentMissedCount >= 5;
 
-  // Report generation
   const generateReport = () => {
     const content = `
-      <!DOCTYPE html><html><head><title>PillPilot - Weekly Medication Report</title>
+      <!DOCTYPE html><html><head><title>PillPilot - Medication Report</title>
       <style>
         body{font-family:Arial,sans-serif;padding:40px;color:#333;max-width:800px;margin:0 auto}
         h1{color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:10px}
@@ -152,9 +163,7 @@ export default function FamilyDoctor() {
           <div><strong>Doctor:</strong> ${doctor?.doctor_name || "Not assigned"}<br><strong>Clinic:</strong> ${doctor?.clinic_name || "N/A"}</div>
           <div><strong>Report Date:</strong> ${new Date().toLocaleDateString()}<br><strong>Period:</strong> Last 30 Days</div>
         </div>
-        
-        ${isEmergencyRisk ? '<div class="emergency">⚠️ <strong>EMERGENCY ALERT:</strong> Patient has missed ' + recentMissedCount + ' doses in the last 30 days. Immediate attention recommended.</div>' : ''}
-        
+        ${isEmergencyRisk ? '<div class="emergency">⚠️ <strong>EMERGENCY ALERT:</strong> Patient has missed ' + recentMissedCount + ' doses in the last 30 days.</div>' : ''}
         <h2>Compliance Summary</h2>
         <div>
           <div class="stat"><div class="stat-value">${compliance?.compliancePercentage ?? 0}%</div><div class="stat-label">Adherence Rate</div></div>
@@ -162,37 +171,26 @@ export default function FamilyDoctor() {
           <div class="stat"><div class="stat-value">${compliance?.missedDoses ?? 0}</div><div class="stat-label">Doses Missed</div></div>
           <div class="stat"><div class="stat-value risk-${(compliance?.riskLevel || "low").toLowerCase()}">${compliance?.riskLevel || "N/A"}</div><div class="stat-label">Risk Level</div></div>
         </div>
-
         <h2>Active Medications</h2>
-        <table>
-          <tr><th>Medicine</th><th>Dosage</th><th>Schedule</th><th>Start Date</th></tr>
+        <table><tr><th>Medicine</th><th>Dosage</th><th>Schedule</th><th>Start Date</th></tr>
           ${(medicines || []).map((m) => `<tr><td>${m.medicine_name}</td><td>${m.dosage}</td><td>${m.intake_times.join(", ")}</td><td>${m.start_date}</td></tr>`).join("")}
         </table>
-
         <h2>Missed Doses Detail</h2>
-        ${missedLogs.length === 0 ? "<p>✅ No missed doses — excellent adherence!</p>" : `
-        <table>
-          <tr><th>Date</th><th>Time</th><th>Medicine</th></tr>
+        ${missedLogs.length === 0 ? "<p>✅ No missed doses</p>" : `
+        <table><tr><th>Date</th><th>Time</th><th>Medicine</th></tr>
           ${missedLogs.slice(0, 20).map((l: any) => `<tr><td>${l.scheduled_date}</td><td>${l.scheduled_time}</td><td>${l.medicines?.medicine_name || "N/A"}</td></tr>`).join("")}
         </table>`}
-        
-        <div class="footer">
-          <p>Generated by PillPilot AI • ${new Date().toLocaleString()} • This report is for informational purposes only.</p>
-        </div>
+        <div class="footer"><p>Generated by PillPilot AI • ${new Date().toLocaleString()}</p></div>
       </body></html>`;
-
     const win = window.open("", "_blank");
     if (win) { win.document.write(content); win.document.close(); win.print(); }
   };
 
   const shareViaEmail = () => {
-    if (!doctor?.email) {
-      toast.error("Please add your doctor's email first");
-      return;
-    }
+    if (!doctor?.email) { toast.error("Please add your doctor's email first"); return; }
     const subject = encodeURIComponent(`Medication Report - ${profile?.name || "Patient"}`);
     const body = encodeURIComponent(
-      `Dear Dr. ${doctor.doctor_name},\n\nPlease find my medication compliance summary:\n\n` +
+      `Dear Dr. ${doctor.doctor_name},\n\nMedication compliance summary:\n\n` +
       `• Adherence Rate: ${compliance?.compliancePercentage ?? 0}%\n` +
       `• Doses Taken: ${compliance?.takenDoses ?? 0}\n` +
       `• Doses Missed: ${compliance?.missedDoses ?? 0}\n` +
@@ -237,7 +235,7 @@ export default function FamilyDoctor() {
               <div className="flex-1">
                 <p className="font-semibold text-destructive">Emergency Alert</p>
                 <p className="text-sm text-muted-foreground">
-                  You've missed {recentMissedCount} doses in the last 30 days. Consider sharing your report with your doctor immediately.
+                  You've missed {recentMissedCount} doses in the last 30 days. Consider sharing your report with your doctor.
                 </p>
               </div>
               <Button variant="destructive" size="sm" onClick={shareViaEmail} className="gap-2">
@@ -251,7 +249,12 @@ export default function FamilyDoctor() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="gap-2"><UserPlus className="h-4 w-4" /> Doctor Profile</TabsTrigger>
             <TabsTrigger value="reports" className="gap-2"><FileText className="h-4 w-4" /> Reports</TabsTrigger>
-            <TabsTrigger value="notes" className="gap-2"><MessageSquare className="h-4 w-4" /> Doctor Notes</TabsTrigger>
+            <TabsTrigger value="notes" className="gap-2">
+              <MessageSquare className="h-4 w-4" /> Doctor Advice
+              {notes && notes.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{notes.length}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Doctor Profile Tab */}
@@ -309,7 +312,6 @@ export default function FamilyDoctor() {
               </CardContent>
             </Card>
 
-            {/* Doctor Info Card */}
             {doctor && (
               <Card className="glass-card border-primary/20">
                 <CardContent className="py-5">
@@ -374,8 +376,7 @@ export default function FamilyDoctor() {
 
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Medication History (Last 30 Days)</CardTitle>
-                <CardDescription>Recent missed doses requiring attention</CardDescription>
+                <CardTitle>Missed Doses (Last 30 Days)</CardTitle>
               </CardHeader>
               <CardContent>
                 {missedLogs.length === 0 ? (
@@ -399,15 +400,15 @@ export default function FamilyDoctor() {
             </div>
           </TabsContent>
 
-          {/* Doctor Notes Tab */}
+          {/* Doctor Advice Tab */}
           <TabsContent value="notes" className="space-y-4">
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
-                  Doctor's Advice & Recommendations
+                  Doctor Advice & Recommendations
                 </CardTitle>
-                <CardDescription>Notes and recommendations from your doctor</CardDescription>
+                <CardDescription>Medical notes and recommendations from your doctor</CardDescription>
               </CardHeader>
               <CardContent>
                 {!notes || notes.length === 0 ? (
@@ -415,19 +416,31 @@ export default function FamilyDoctor() {
                     <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                       <MessageSquare className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <p className="text-muted-foreground">No notes from your doctor yet</p>
+                    <p className="text-muted-foreground font-medium">No notes from your doctor yet</p>
                     <p className="text-sm text-muted-foreground">
                       When your doctor sends recommendations, they'll appear here
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {notes.map((note: any) => (
-                      <div key={note.id} className="p-4 rounded-lg border border-border bg-muted/30">
-                        <p className="text-sm">{note.note}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {new Date(note.created_at).toLocaleDateString()} at {new Date(note.created_at).toLocaleTimeString()}
-                        </p>
+                      <div key={note.id} className="p-5 rounded-xl border border-border bg-muted/20 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Stethoscope className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">Dr. {note.doctor_name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(note.created_at).toLocaleDateString('en-US', {
+                                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+                              })} at {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs border-primary/20 text-primary">Advice</Badge>
+                        </div>
+                        <p className="text-sm leading-relaxed pl-11">{note.note}</p>
                       </div>
                     ))}
                   </div>
