@@ -18,6 +18,7 @@ import FamilyMembers from "./pages/FamilyMembers";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
+import AlarmWrapper from "./components/AlarmWrapper";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <AlarmWrapper />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/auth" element={<Auth />} />
