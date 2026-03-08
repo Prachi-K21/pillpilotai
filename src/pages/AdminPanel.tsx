@@ -13,10 +13,49 @@ import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { roles } = useAuth();
+  const qc = useQueryClient();
 
   if (!roles.includes("admin")) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Fetch all users with their roles
+  const { data: users } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      const { data: profiles } = await supabase.from("profiles").select("user_id, name, phone_number");
+      const { data: allRoles } = await supabase.from("user_roles").select("user_id, role");
+
+      const roleMap: Record<string, string[]> = {};
+      (allRoles || []).forEach((r) => {
+        if (!roleMap[r.user_id]) roleMap[r.user_id] = [];
+        roleMap[r.user_id].push(r.role);
+      });
+
+      return (profiles || []).map((p) => ({
+        ...p,
+        roles: roleMap[p.user_id] || ["patient"],
+      }));
+    },
+  });
+
+  const addDoctorRole = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "doctor" as any });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Doctor role assigned!"); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const removeDoctorRole = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "doctor" as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Doctor role removed!"); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
