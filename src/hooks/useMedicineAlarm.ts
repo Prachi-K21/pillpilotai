@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useMedicines } from "@/hooks/useMedicines";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AlarmItem {
   id: string;
@@ -15,6 +16,7 @@ export function useMedicineAlarm() {
   const { data: medicines } = useMedicines();
   const [activeAlarms, setActiveAlarms] = useState<AlarmItem[]>([]);
   const firedRef = useRef<Set<string>>(new Set());
+  const snoozeTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Request notification permission on mount
   useEffect(() => {
@@ -23,16 +25,20 @@ export function useMedicineAlarm() {
     }
   }, []);
 
-  const stopAlarm = useCallback(() => {
-    // No persistent audio to stop with Web Audio API
-  }, []);
-
   const dismissAlarm = useCallback((alarmId: string) => {
     setActiveAlarms((prev) => prev.filter((a) => a.id !== alarmId));
+    // Clear snooze timer if any
+    const timer = snoozeTimers.current.get(alarmId);
+    if (timer) {
+      clearTimeout(timer);
+      snoozeTimers.current.delete(alarmId);
+    }
   }, []);
 
   const dismissAll = useCallback(() => {
     setActiveAlarms([]);
+    snoozeTimers.current.forEach((timer) => clearTimeout(timer));
+    snoozeTimers.current.clear();
   }, []);
 
   const playAlarmSound = useCallback(() => {
@@ -81,6 +87,24 @@ export function useMedicineAlarm() {
       } as NotificationOptions);
     }
   }, [playAlarmSound]);
+
+  const snoozeAlarm = useCallback((alarmId: string) => {
+    const alarm = activeAlarms.find((a) => a.id === alarmId);
+    if (!alarm) return;
+
+    // Dismiss current alarm
+    setActiveAlarms((prev) => prev.filter((a) => a.id !== alarmId));
+    toast.info(`⏰ Snoozed ${alarm.medicineName} for 5 minutes`);
+
+    // Re-trigger after 5 minutes
+    const timer = setTimeout(() => {
+      const snoozeId = `${alarmId}-snooze-${Date.now()}`;
+      triggerAlarm({ ...alarm, id: snoozeId });
+      snoozeTimers.current.delete(alarmId);
+    }, 5 * 60 * 1000);
+
+    snoozeTimers.current.set(alarmId, timer);
+  }, [activeAlarms, triggerAlarm]);
 
   // Local time-based alarm check
   useEffect(() => {
@@ -143,7 +167,6 @@ export function useMedicineAlarm() {
             if (firedRef.current.has(alarmKey)) return;
             firedRef.current.add(alarmKey);
 
-            // Extract medicine name from the message
             const msgMatch = notif.message?.match(/SMS reminder sent for (.+?) at (\d{2}:\d{2})/);
             const medicineName = msgMatch?.[1] || "Your medicine";
             const time = msgMatch?.[2] || "";
@@ -173,5 +196,12 @@ export function useMedicineAlarm() {
     return () => clearTimeout(timer);
   }, []);
 
-  return { activeAlarms, dismissAlarm, dismissAll };
+  // Cleanup snooze timers on unmount
+  useEffect(() => {
+    return () => {
+      snoozeTimers.current.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
+  return { activeAlarms, dismissAlarm, dismissAll, snoozeAlarm };
 }
