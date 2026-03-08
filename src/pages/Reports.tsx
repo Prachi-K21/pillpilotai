@@ -20,7 +20,7 @@ export default function Reports() {
     const content = `
       <!DOCTYPE html>
       <html>
-      <head><title>MedTrack AI - Compliance Report</title>
+      <head><title>PillPilot - Compliance Report</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
         h1 { color: #0d9488; border-bottom: 2px solid #0d9488; padding-bottom: 10px; }
@@ -35,7 +35,7 @@ export default function Reports() {
       </style>
       </head>
       <body>
-        <h1>🏥 MedTrack AI - Compliance Report</h1>
+        <h1>🏥 PillPilot - Compliance Report</h1>
         <p>Patient: <strong>${profile?.name || "N/A"}</strong> | Generated: ${new Date().toLocaleDateString()}</p>
         
         <h2>Summary (Last 30 Days)</h2>

@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
         if (existing) continue;
 
-        const message = `💊 MedTrack Reminder: Hi ${profile.name || "there"}, it's time to take ${med.medicine_name} (${med.dosage}) at ${time}. Stay healthy!`;
+        const message = `💊 PillPilot Reminder: Hi ${profile.name || "there"}, it's time to take ${med.medicine_name} (${med.dosage}) at ${time}. Stay healthy!`;
 
         await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, profile.phone_number, message);
 
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
             .eq("notify_on_missed", true);
 
           for (const member of familyMembers || []) {
-            const alertMsg = `⚠️ MedTrack Alert: ${profile.name || "Your family member"} missed their dose of ${med.medicine_name} scheduled at ${time}. Please check on them.`;
+            const alertMsg = `⚠️ PillPilot Alert: ${profile.name || "Your family member"} missed their dose of ${med.medicine_name} scheduled at ${time}. Please check on them.`;
             await sendSms(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, member.phone_number, alertMsg);
             sentCount++;
           }

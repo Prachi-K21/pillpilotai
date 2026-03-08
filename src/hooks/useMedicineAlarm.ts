@@ -73,11 +73,12 @@ export function useMedicineAlarm() {
     playAlarmSound();
 
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("💊 Medicine Reminder", {
+      new Notification("💊 PillPilot Reminder", {
         body: `Time to take ${alarm.medicineName} (${alarm.dosage})`,
-        icon: "/favicon.ico",
+        icon: "/pwa-icon-192.png",
         tag: alarm.id,
         requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 200],
       });
     }
   }, [playAlarmSound]);

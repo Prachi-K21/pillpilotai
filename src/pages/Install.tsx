@@ -45,7 +45,7 @@ export default function Install() {
             <CheckCircle className="h-12 w-12 text-primary" />
           </div>
           <h1 className="text-3xl font-display font-bold mb-2">Already Installed!</h1>
-          <p className="text-muted-foreground">MedTrack AI is installed on your device. You're all set!</p>
+          <p className="text-muted-foreground">PillPilot is installed on your device. You're all set!</p>
         </div>
       </DashboardLayout>
     );
@@ -55,8 +55,8 @@ export default function Install() {
     <DashboardLayout>
       <div className="max-w-lg mx-auto py-8">
         <div className="text-center mb-8">
-          <img src="/pwa-icon-192.png" alt="MedTrack AI" className="h-20 w-20 mx-auto mb-4 rounded-2xl shadow-lg" />
-          <h1 className="text-3xl font-display font-bold mb-2">Install MedTrack AI</h1>
+          <img src="/pwa-icon-192.png" alt="PillPilot" className="h-20 w-20 mx-auto mb-4 rounded-2xl shadow-lg" />
+          <h1 className="text-3xl font-display font-bold mb-2">Install PillPilot</h1>
           <p className="text-muted-foreground">Get the full app experience on your phone</p>
         </div>
 
