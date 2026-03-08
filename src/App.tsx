@@ -18,6 +18,7 @@ import FamilyMembers from "./pages/FamilyMembers";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
+import Install from "./pages/Install";
 import AlarmWrapper from "./components/AlarmWrapper";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/family" element={<FamilyMembers />} />
               <Route path="/doctor" element={<DoctorDashboard />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/install" element={<Install />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
