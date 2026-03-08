@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAddMedicine, useUpdateMedicine, useMedicines } from "@/hooks/useMedicines";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Plus } from "lucide-react";
-import { useEffect } from "react";
+import { X, Plus, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function AddMedicine() {
   const { id } = useParams();
@@ -26,6 +26,8 @@ export default function AddMedicine() {
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
   const [dosesRemaining, setDosesRemaining] = useState("");
+  const [interactions, setInteractions] = useState<any[]>([]);
+  const [checkingInteractions, setCheckingInteractions] = useState(false);
 
   useEffect(() => {
     if (isEditing && medicines) {
@@ -48,6 +50,29 @@ export default function AddMedicine() {
   };
 
   const removeTime = (t: string) => setTimes(times.filter((x) => x !== t));
+
+  // Check interactions when name changes
+  useEffect(() => {
+    if (!name.trim() || !medicines || medicines.length === 0 || isEditing) return;
+    const timeout = setTimeout(async () => {
+      setCheckingInteractions(true);
+      try {
+        const allMeds = [...medicines.map((m) => ({ medicine_name: m.medicine_name, dosage: m.dosage })), { medicine_name: name.trim(), dosage: dosage || "unknown" }];
+        if (allMeds.length < 2) return;
+        const { data } = await supabase.functions.invoke("check-interactions", { body: { medicines: allMeds } });
+        if (data?.interactions?.length > 0) {
+          setInteractions(data.interactions);
+        } else {
+          setInteractions([]);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setCheckingInteractions(false);
+      }
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [name, dosage, medicines, isEditing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +151,33 @@ export default function AddMedicine() {
                 <Label>Doses Remaining (optional)</Label>
                 <Input type="number" value={dosesRemaining} onChange={(e) => setDosesRemaining(e.target.value)} placeholder="e.g. 30" min="0" />
               </div>
+
+              {/* Drug Interaction Warning */}
+              {checkingInteractions && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking for drug interactions...
+                </div>
+              )}
+              {interactions.length > 0 && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Potential Drug Interactions Detected
+                  </div>
+                  {interactions.map((int, i) => (
+                    <div key={i} className="text-sm space-y-0.5 pl-7">
+                      <p className="font-medium text-foreground">
+                        {int.severity === "severe" ? "🔴" : int.severity === "moderate" ? "🟡" : "🟢"} {int.drug1} + {int.drug2}
+                      </p>
+                      <p className="text-muted-foreground">{int.description}</p>
+                      <p className="text-xs text-muted-foreground italic">{int.precaution}</p>
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted-foreground pl-7">⚠️ Consult your doctor before proceeding.</p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <Button type="submit" disabled={addMed.isPending || updateMed.isPending}>
                   {isEditing ? "Update" : "Add"} Medicine
