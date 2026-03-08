@@ -340,7 +340,7 @@ export default function AIChatBot() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Disclaimer */}
           <div className="px-4 py-1.5 text-[10px] text-muted-foreground text-center border-t border-border bg-muted/30 shrink-0">
