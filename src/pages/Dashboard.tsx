@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Pill, CheckCircle2, XCircle, Clock, TrendingUp, AlertTriangle, ShieldCheck, CalendarDays, Activity, BarChart3, Stethoscope, MessageSquare } from "lucide-react";
+import AIHealthTips from "@/components/AIHealthTips";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
