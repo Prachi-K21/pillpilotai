@@ -17,7 +17,7 @@ const patientLinks = [
   { to: "/dose-log", icon: ClipboardList, label: "Dose Log" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/family", icon: Users, label: "Family Alerts" },
-  { to: "/family-doctor", icon: Stethoscope, label: "Family Doctor" },
+  
   { to: "/notifications", icon: Bell, label: "Notifications" },
   { to: "/reports", icon: FileText, label: "Reports" },
   { to: "/install", icon: Download, label: "Install App" },
