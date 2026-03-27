@@ -278,6 +278,9 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* AI Health Tips */}
+        <AIHealthTips medicines={medicines} compliance={compliance} todayDoses={todayDoses} />
+
         {/* Doctor Advice Section */}
         {doctorNotes && doctorNotes.length > 0 && (
           <Card className="glass-card animate-fade-in" style={{ animationDelay: "400ms" }}>
