@@ -20,7 +20,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
 import Settings from "./pages/Settings";
-import FamilyDoctor from "./pages/FamilyDoctor";
+
 import AlarmWrapper from "./components/AlarmWrapper";
 import AIChatBot from "./components/AIChatBot";
 
@@ -49,7 +49,7 @@ const App = () => (
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/family" element={<FamilyMembers />} />
-              <Route path="/family-doctor" element={<FamilyDoctor />} />
+              
               <Route path="/doctor" element={<DoctorDashboard />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/install" element={<Install />} />
